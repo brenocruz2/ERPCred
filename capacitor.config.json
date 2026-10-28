@@ -1,0 +1,6 @@
+{
+  "appId": "com.suaempresa.gestaoemprestimos",
+  "appName": "Gestão de Empréstimos",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "backgroundColor": "#0f172a" }
+}
