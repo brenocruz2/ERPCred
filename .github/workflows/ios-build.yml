@@ -1,0 +1,82 @@
+name: ERPCred iOS Simulator Build
+
+on:
+  push:
+    branches:
+      - capacitor-ios
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-simulator:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify static web app
+        run: |
+          test -f www/index.html
+          test -f capacitor.config.json
+
+      - name: Generate iOS platform if missing
+        run: |
+          if [ ! -d ios/App ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$GITHUB_WORKSPACE/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload simulator app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ERPCred-iOS-Simulator-App
+          path: build/DerivedData/Build/Products/Debug-iphonesimulator/App.app
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Xcode build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ERPCred-iOS-Build-Logs
+          path: |
+            build/DerivedData/Logs
+            ios/App/Podfile.lock
+          if-no-files-found: warn
+          retention-days: 7
